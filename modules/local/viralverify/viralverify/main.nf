@@ -12,30 +12,40 @@ process VIRALVERIFY_VIRALVERIFY {
     path db
 
     output:
-    tuple val(meta), path ("${meta.id}_viralverify.csv.gz") , emit: csv_gz
+    tuple val(meta), path ("${meta.id}_result_table.csv.gz")  , emit: result_table
+    tuple val(meta), path ("${meta.id}_domtblout.gz")         , emit: domtblout
     tuple val("${task.process}"), val('viralverify'), val('1.1'), emit: versions_viralverify, topic: versions
     // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
 
     script:
+    def is_compressed  = fasta.getExtension() == "gz" ? true : false
+    def fasta_name     = is_compressed ? fasta.getBaseName().replace(".gz", "") : fasta
     """
     ### Uncompres
-    gunzip -c ${fasta} > ${meta.id}.fasta
+    if [ "${is_compressed}" == "true" ]; then
+        gzip -c -d ${fasta} > ${fasta_name}
+    fi
 
     ### Run ViralVerify
     viralverify \\
-        -f ${meta.id}.fasta \\
+        -f ${fasta_name} \\
         --hmm ${db} \\
         -o ${meta.id}_viralverify \\
         -t ${task.cpus}
 
     ### Compress
-    mv ${meta.id}_viralverify/${file(meta.id + ".fasta").getBaseName()}_result_table.csv ${meta.id}_viralverify.csv
-    gzip ${meta.id}_viralverify.csv
+    gzip -c ${meta.id}_viralverify/${file(fasta_name).getBaseName()}_result_table.csv > ${meta.id}_result_table.csv.gz
+    gzip -c ${meta.id}_viralverify/${file(fasta_name).getBaseName()}_domtblout > ${meta.id}_domtblout.gz
+
+    ### Cleanup
+    rm -rf ${meta.id}_viralverify
+    rm -f ${fasta_name}
     """
 
     stub:
     """
     ### Touch empty output file
-    echo "" | gzip > ${meta.id}_viralverify.csv.gz
+    echo "" | gzip > ${meta.id}_result_table.csv.gz
+    echo "" | gzip > ${meta.id}_domtblout.gz
     """
 }

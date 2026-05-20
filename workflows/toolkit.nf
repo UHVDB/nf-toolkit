@@ -40,25 +40,16 @@ workflow TOOLKIT {
             fastas,
             params.dtr_sequences_file
         )
-    }
 
     // //
     // // SUBWORKFLOW: Classify viruses in input fasta files
     // //
     // HQFILTER(
-    //     fastas,
-    //     DATABASES.out.genomad_db,
-    //     DATABASES.out.checkv_db
+    //     CLASSIFY.out.fasta,
+    //     CLASSIFY.out.tsv,
+    //     CLASSIFY.out.checkv_db
     // )
-
-    // //
-    // // SUBWORKFLOW: Classify viruses in input fasta files
-    // //
-    // HCFILTER(
-    //     fastas,
-    //     DATABASES.out.genomad_db,
-    //     DATABASES.out.checkv_db
-    // )
+    }
 
     //
     // Collate and save software versions

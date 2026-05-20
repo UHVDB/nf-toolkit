@@ -85,12 +85,12 @@ def countFastAs(ch_fastas) {
 //
 def extractDigitBeforeExtension(String path) {
     // Regex pattern to match the digit before the file extension
-    def pattern = /(\d+)(?=\.(fastq|fastq\.gz|fq|fq\.gz)$)/
+    def pattern = /(\d+)\.fasta(?:\.gz)?$/
 
     // Extract the digit
     def matcher = path =~ pattern
     if (matcher.find()) {
-        return matcher[0][1].toInteger()
+        return matcher[0][1]
     } else {
         return null
     }
@@ -105,7 +105,7 @@ def add_split(Map meta, String read){
     meta.each{ k,v ->
         new_meta[k] = v}
 
-    new_meta.split = extractDigitBeforeExtension(read)
+    new_meta.id = new_meta.id + "_split" + extractDigitBeforeExtension(read)
 
     return new_meta
 }

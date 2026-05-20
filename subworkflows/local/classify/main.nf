@@ -8,10 +8,11 @@ include { SEQKIT_SPLIT2             } from '../../../modules/nf-core/seqkit/spli
 include { GENOMAD_ENDTOEND          } from '../../../modules/nf-core/genomad/endtoend/main'
 include { CHECKV_ENDTOEND           } from '../../../modules/nf-core/checkv/endtoend/main'
 include { SEQKIT_REPLACE as SEQKIT_REPLACE_PROVIRUS } from '../../../modules/nf-core/seqkit/replace/main'
+include { CAT_CAT as CAT_CAT_CHECKV } from '../../../modules/nf-core/cat/cat/main'
 include { CSVTK_FILTER2             } from '../../../modules/local/csvtk/filter2/main'
 include { SEQKIT_GREP               } from '../../../modules/nf-core/seqkit/grep/main'
 include { VIRALVERIFY_VIRALVERIFY   } from '../../../modules/local/viralverify/viralverify/main'
-// include { UHVDB_CLASSIFY            } from '../../../modules/local/uhvdb/classify/main'
+include { UHVDB_CLASSIFY            } from '../../../modules/local/uhvdb/classify/main'
 include { CAT_CAT                   } from '../../../modules/nf-core/cat/cat/main'
 
 workflow CLASSIFY {
@@ -112,6 +113,14 @@ workflow CLASSIFY {
     )
 
     //
+    // MODULE: Combine CheckV viruses and proviruses
+    //
+    CAT_CAT_CHECKV(
+        CHECKV_ENDTOEND.out.viruses,
+        SEQKIT_REPLACE_PROVIRUS.out.fastx
+    )
+
+    //
     // MODULE: Filter CheckV's completeness output
     //
     CSVTK_FILTER2(
@@ -122,14 +131,15 @@ workflow CLASSIFY {
     ch_mq_plus_viruses = CSVTK_FILTER2.out.csv
         .map { _meta, file -> file.text.readLines() }
         .flatten()
+        .map { line -> line.split('\t')[0] }
         .unique()
-        .collectFile(name: 'ch_mq_plus_viruses.txt', newLine: true)
+        .collectFile(name: 'mq_plus_viruses.txt', newLine: true)
 
     //
     // MODULE: Filter CheckV output sequences
     //
     SEQKIT_GREP(
-        CHECKV_ENDTOEND.out.viruses.mix(SEQKIT_REPLACE.out.fastx),
+        rmEmptyFastAs(CHECKV_ENDTOEND.out.viruses.mix(SEQKIT_REPLACE.out.fastx)),
         ch_mq_plus_viruses
     )
 
@@ -137,25 +147,26 @@ workflow CLASSIFY {
     // MODULE: Run ViralVerify
     //
     VIRALVERIFY_VIRALVERIFY(
-        CHECKV_ENDTOEND.out.viruses.mix(CHECKV_ENDTOEND.out.proviruses),
+        SEQKIT_GREP.out.filter,
         ch_viralverify_db
     )
 
     // Combine geNomad, CheckV, and viralverify outputs
-    ch_uhvdb_classify_input = CHECKV_ENDTOEND.out.viruses
-        .mix(SEQKIT_REPLACE_PROVIRUS.out.fastx)
+    ch_uhvdb_classify_input = SEQKIT_GREP.out.filter
+        .combine(SEQKIT_GREP.out.filter, by:0)
         .combine(GENOMAD_ENDTOEND.out.virus_summary, by:0)
         .combine(GENOMAD_ENDTOEND.out.virus_genes, by:0)
         .combine(CHECKV_ENDTOEND.out.quality_summary, by:0)
-        .combine(rmEmptyTsvs(VIRALVERIFY_VIRALVERIFY.out.csv_gz), by:0)
+        .combine(rmEmptyTsvs(VIRALVERIFY_VIRALVERIFY.out.result_table), by:0)
+        .view()
 
-    // //
-    // // MODULE: Classify viruses by combining results from geNomad, CheckV, and ViralVerify
-    // //
-    // UHVDB_CLASSIFY(
-    //     ch_uhvdb_classify_input,
-    //     dtr_sequences_file
-    // )
+    //
+    // MODULE: Classify viruses by combining results from geNomad, CheckV, and ViralVerify
+    //
+    UHVDB_CLASSIFY(
+        ch_uhvdb_classify_input,
+        dtr_sequences_file
+    )
 
     // //
     // // MODULE: Combine filtered virus fastas
