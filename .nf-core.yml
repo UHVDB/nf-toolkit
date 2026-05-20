@@ -1,0 +1,42 @@
+repository_type: pipeline
+
+nf_core_version: 4.0.2
+
+lint:
+  files_unchanged:
+    - CODE_OF_CONDUCT.md
+    - assets/nf-core-toolkit_logo_light.png
+    - docs/images/nf-core-toolkit_logo_light.png
+    - docs/images/nf-core-toolkit_logo_dark.png
+    - .github/ISSUE_TEMPLATE/bug_report.yml
+    - .github/PULL_REQUEST_TEMPLATE.md
+    - assets/email_template.txt
+    - docs/README.md
+  nextflow_config:
+    - manifest.name
+    - manifest.homePage
+  multiqc_config:
+    - report_comment
+  files_exist:
+    - conf/igenomes.config
+    - conf/igenomes_ignored.config
+    - CODE_OF_CONDUCT.md
+    - assets/nf-core-toolkit_logo_light.png
+    - docs/images/nf-core-toolkit_logo_light.png
+    - docs/images/nf-core-toolkit_logo_dark.png
+    - .github/ISSUE_TEMPLATE/config.yml
+    - .github/workflows/awstest.yml
+    - .github/workflows/awsfulltest.yml
+
+template:
+  org: UHVDB
+  name: toolkit
+  description: A toolkit for updating and utilizing the Unified Human Virome Database
+    (UHVDB
+  author: Carson Miller
+  version: 1.0.0dev
+  force: true
+  outdir: .
+  skip_features:
+    - igenomes
+  is_nfcore: false
