@@ -4,7 +4,7 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 include { MULTIQC                } from '../modules/nf-core/multiqc/main'
-include { DATABASES              } from '../subworkflows/local/databases'
+include { CLASSIFY               } from '../subworkflows/local/classify'
 include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
@@ -19,7 +19,7 @@ include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_tool
 workflow TOOLKIT {
 
     take:
-    fastqs  // channel: [ [ meta ], fastq_1, fastq_2 ]
+    reads   // channel: [ [ meta ], read_1, read_2 ]
     sra     // channel: [ [ meta ], sra ]
     fastas  // channel: [ [ meta ], fna ]
     multiqc_config
@@ -32,16 +32,33 @@ workflow TOOLKIT {
     def ch_versions = channel.empty()
     def ch_multiqc_files = channel.empty()
 
-    // //
-    // // MODULE: Run FastQC
-    // //
-    // FASTQC(ch_samplesheet)
-    // ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.map{ _meta, file -> file })
+    //
+    // SUBWORKFLOW: Classify viruses in input fasta files
+    //
+    if ( params.run_update || params.run_analyze ) {
+        CLASSIFY(
+            fastas,
+            params.dtr_sequences_file
+        )
+    }
 
-    //
-    // SUBWORKFLOW: Download databases used across subworkflows
-    //
-    DATABASES()
+    // //
+    // // SUBWORKFLOW: Classify viruses in input fasta files
+    // //
+    // HQFILTER(
+    //     fastas,
+    //     DATABASES.out.genomad_db,
+    //     DATABASES.out.checkv_db
+    // )
+
+    // //
+    // // SUBWORKFLOW: Classify viruses in input fasta files
+    // //
+    // HCFILTER(
+    //     fastas,
+    //     DATABASES.out.genomad_db,
+    //     DATABASES.out.checkv_db
+    // )
 
     //
     // Collate and save software versions

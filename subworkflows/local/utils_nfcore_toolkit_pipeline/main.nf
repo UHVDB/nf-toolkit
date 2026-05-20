@@ -85,39 +85,39 @@ workflow PIPELINE_INITIALISATION {
     // Create channel from input file provided through params.input
     //
     ch_samplesheet = channel.fromList(samplesheetToList(params.input, "${projectDir}/assets/schema_input.json"))
-        .map { meta, fastq_1, fastq_2, _fna ->
-                meta.single_end = fastq_2 ? false : true
-                def no_fastq    = !fastq_1 && !fastq_2
+        .map { meta, read_1, read_2, _fna ->
+                meta.single_end = read_2 ? false : true
+                def no_read    = !read_1 && !read_2
                 if (meta.single_end) {
-                    return [ meta, [ fastq_1 ] ]
-                } else if (!no_fastq) {
-                    return [ meta, [ fastq_1, fastq_2 ] ]
+                    return [ meta, [ read_1 ] ]
+                } else if (!no_read) {
+                    return [ meta, [ read_1, read_2 ] ]
                 } else {
                     return [ meta, [] ]
                 }
         }
-        .multiMap { meta, fastqs ->
-            fastqs: [ meta, fastqs ]
+        .multiMap { meta, reads ->
+            reads: [ meta, reads ]
             sra:    [ meta, meta.acc ]
         }
 
     // validate samplesheet
-    ch_samplesheet.fastqs
-        .map { meta, fastq ->
-            [ meta.id, meta, fastq ]
+    ch_samplesheet.reads
+        .map { meta, reads ->
+            [ meta.id, meta, reads ]
         }
         .groupTuple()
         .map { samplesheet -> validateInputSamplesheet(samplesheet) }
 
     ch_input_fastas = channel
             .fromList(samplesheetToList(params.input, "${projectDir}/assets/schema_input.json"))
-            .map { meta, _fastq_1, _fastq_2, fna ->
-                return [ meta, fna ]
+            .map { meta, _read_1, _read_2, fasta ->
+                return [ meta, fasta ]
             }
-            .filter { _meta, fna -> fna[0] }
+            .filter { _meta, fasta -> fasta[0] }
 
     emit:
-    fastqs      = ch_samplesheet.fastqs.filter { _meta, fastqs -> fastqs[0] }
+    reads       = ch_samplesheet.reads.filter { _meta, reads -> reads[0] }
     sra         = ch_samplesheet.sra.filter { _meta, sra -> sra[0] }
     fastas      = ch_input_fastas
     versions    = ch_versions

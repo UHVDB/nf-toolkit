@@ -32,7 +32,7 @@ template:
   org: UHVDB
   name: toolkit
   description: A toolkit for updating and utilizing the Unified Human Virome Database
-    (UHVDB
+    (UHVDB)
   author: Carson Miller
   version: 1.0.0dev
   force: true
