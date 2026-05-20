@@ -28,7 +28,9 @@ include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_tool
 workflow UHVDB_TOOLKIT {
 
     take:
-    samplesheet // channel: samplesheet read in from --input
+    fastqs  // channel: [ [ meta ], fastq_1, fastq_2 ]
+    sra     // channel: [ [ meta ], sra ]
+    fastas  // channel: [ [ meta ], fna ]
 
     main:
 
@@ -36,7 +38,9 @@ workflow UHVDB_TOOLKIT {
     // WORKFLOW: Run pipeline
     //
     TOOLKIT (
-        samplesheet,
+        fastqs,
+        sra,
+        fastas,
         params.multiqc_config,
         params.multiqc_logo,
         params.multiqc_methods_description,
@@ -45,6 +49,7 @@ workflow UHVDB_TOOLKIT {
     emit:
     multiqc_report = TOOLKIT.out.multiqc_report // channel: /path/to/multiqc_report.html
 }
+
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW
@@ -73,8 +78,11 @@ workflow {
     // WORKFLOW: Run main workflow
     //
     UHVDB_TOOLKIT (
-        PIPELINE_INITIALISATION.out.samplesheet
+        PIPELINE_INITIALISATION.out.fastqs,
+        PIPELINE_INITIALISATION.out.sra,
+        PIPELINE_INITIALISATION.out.fastas
     )
+
     //
     // SUBWORKFLOW: Run completion tasks
     //

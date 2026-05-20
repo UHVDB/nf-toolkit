@@ -1,0 +1,2 @@
+sample,source_db,db_type,body_site,fna
+uhgv_test_fna,UHGV,Assembly,Gut,https://github.com/UHVDB/toolkit/raw/refs/heads/main/assets/test_datasets/fnas/uhgv_hq_plus_test_2.fna.gz
