@@ -79,3 +79,33 @@ def countFastAs(ch_fastas) {
         return 0
     }
 }
+
+//
+// Extract the number before the file extension
+//
+def extractDigitBeforeExtension(String path) {
+    // Regex pattern to match the digit before the file extension
+    def pattern = /(\d+)(?=\.(fastq|fastq\.gz|fq|fq\.gz)$)/
+
+    // Extract the digit
+    def matcher = path =~ pattern
+    if (matcher.find()) {
+        return matcher[0][1].toInteger()
+    } else {
+        return null
+    }
+}
+
+//
+// Add the split number to a channel's meta
+//
+def add_split(Map meta, String read){
+    def new_meta = [:]
+
+    meta.each{ k,v ->
+        new_meta[k] = v}
+
+    new_meta.split = extractDigitBeforeExtension(read)
+
+    return new_meta
+}

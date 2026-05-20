@@ -112,6 +112,7 @@ workflow PIPELINE_INITIALISATION {
     ch_input_fastas = channel
             .fromList(samplesheetToList(params.input, "${projectDir}/assets/schema_input.json"))
             .map { meta, _read_1, _read_2, fasta ->
+                meta.single_end = false
                 return [ meta, fasta ]
             }
             .filter { _meta, fasta -> fasta[0] }
