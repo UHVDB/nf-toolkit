@@ -24,10 +24,11 @@ process CSVTK_FILTER2 {
     """
     csvtk \\
         filter2 \\
-        $args \\
+        $csv \\
         --num-cpus $task.cpus \\
-        --out-file ${prefix}.${out_extension} \\
-        $csv
+        $args \\
+        --out-file ${prefix}.${out_extension}
+        
     """
 
     stub:

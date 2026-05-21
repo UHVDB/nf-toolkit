@@ -70,6 +70,11 @@
                         "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",
                         "installed_by": ["modules"]
                     },
+                    "hmmer/hmmsearch": {
+                        "branch": "master",
+                        "git_sha": "f2bed902e13076698e7d59d1fedf5c083f6f17c0",
+                        "installed_by": ["modules"]
+                    },
                     "instrain/compare": {
                         "branch": "master",
                         "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",

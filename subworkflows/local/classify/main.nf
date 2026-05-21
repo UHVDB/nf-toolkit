@@ -129,24 +129,22 @@ workflow CLASSIFY {
         CHECKV_ENDTOEND.out.completeness
     )
 
-    // Get only unique sequences in hq fasta
-    ch_mq_plus_viruses = CSVTK_FILTER2.out.csv
-        .map { _meta, file -> file.text.readLines() }
-        .flatten()
-        .map { line -> line.split('\t')[0] }
-        .unique()
-        .collectFile(name: 'mq_plus_viruses.txt', newLine: true)
-
-    // Remove proviruses item when it is null
-    ch_checkv_viruses_no_cat = ch_checkv_viruses.no_cat
-        .map { meta, viruses, _proviruses -> [ meta, viruses ] }
+    // Create input for seqkit grep
+    ch_seqkit_grep_input = ch_checkv_viruses.no_cat
+        .map { meta, viruses, _proviruses -> [ meta, viruses ] } // Remove proviruses item when it is null
+        .mix(FIND_CONCATENATE.out.file_out) // Combine with virus + provirus joined fasta
+        .join(CSVTK_FILTER2.out.csv) // join with filtered completenesss by meta
+        .multiMap { meta, fasta, tsv ->
+            fasta: [ meta, fasta ]
+            tsv: [ tsv ]
+        }
 
     //
     // MODULE: Filter CheckV output sequences
     //
     SEQKIT_GREP(
-        ch_checkv_viruses_no_cat.mix(FIND_CONCATENATE.out.file_out),
-        ch_mq_plus_viruses.first()
+        ch_seqkit_grep_input.fasta,
+        ch_seqkit_grep_input.tsv
     )
 
     //
