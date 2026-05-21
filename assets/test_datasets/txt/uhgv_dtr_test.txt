@@ -1,2 +1,2 @@
-UHGV-0004306
-UHGV-0004304
+uhgv_test_fna_UHGV-0004306
+uhgv_test_fna_UHGV-0004304

@@ -4,8 +4,8 @@ process TRTRIMMER {
 
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/8e/8e26a6b2a7696825b05140168093374369b037a05433376788033210c777129d/data' :
-        'community.wave.seqera.io/library/csvtk:0.37.0--113625988dd3285d' }"
+        'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/04/04234935a0dd1d913e1b4da7cd6f57a5ecdc9f6b28640621c3eaf1d5b1b668eb/data' :
+        'community.wave.seqera.io/library/tr-trimmer:0.5.0--9b3177460ba5806c' }"
 
     input:
     tuple val(meta), path(fasta)

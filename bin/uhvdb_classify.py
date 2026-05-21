@@ -135,10 +135,12 @@ def main(args=None):
         dtr_seq_set = set(pl.read_csv(args.dtr_sequences, has_header=False, new_columns=['seq_name'])['seq_name'])
     else:
         dtr_seq_set = set()
+
+    print(dtr_seq_set)
     
     quality_summary = (
         pl.read_csv(
-            args.quality_summary, separator='\t', ignore_errors=True, null_values=['NA'],
+            args.quality_summary, separator='\t', ignore_errors=True, null_values=['NA'], schema_overrides={'completeness': pl.Float64},
             columns=[
                 'contig_id', 'contig_length', 'proviral_length', 'viral_genes', 'host_genes', 'provirus',
                 'completeness', 'completeness_method', 'kmer_freq', 'warnings'
@@ -320,14 +322,13 @@ def main(args=None):
             .filter(pl.col('uhvdb_virus_classification').is_in(['uncertain', 'confident']))
             ['seq_name']
     )
-    complete_seqs = set(
+    complete_seqs_set = set(
         joined_w_scores
             .filter(pl.col('uhvdb_virus_classification').is_in(['uncertain', 'confident']))
             .filter(pl.col('completeness') >= 80)
             .filter(pl.col('completeness_method').str.contains('DTR'))
             ['seq_name']
     )
-
 
     # write output FASTA file
     viral_seqs = []
@@ -342,12 +343,12 @@ def main(args=None):
         for record in SeqIO.parse(fasta_gunzipped, "fasta"):
             if record.id in already_added:
                 continue
-            if record.id in complete_seqs:
+            if record.id in complete_seqs_set:
                 complete_seqs.append(record)
-                already_added.add(record.id)
-            elif record.id in uncertain_confident:
+            if record.id in uncertain_confident:
                 viral_seqs.append(record)
-                already_added.add(record.id)
+                
+            already_added.add(record.id)
 
     SeqIO.write(viral_seqs, args.output_fasta, "fasta")
     SeqIO.write(complete_seqs, args.output_complete_fasta, "fasta")
