@@ -60,23 +60,16 @@ def rmEmptyTsvs(ch_tsvs) {
 def countFastAs(ch_fastas) {
     // if not stub run, count the number of sequences in the fasta files
     if (!workflow.stubRun) {
-        def fasta_counts = 0
-        ch_fastas
+        def ch_fastas_counts = ch_fastas
             .map { _meta, fasta ->
-                try {
-                    fasta_counts += file(fasta).countFasta( limit: 2 )
-                } catch (java.util.zip.ZipException _e) {
-                    log.debug "[rmEmptyFastAs]: ${fasta} is not in GZIP format, this is likely because it was cleaned with --remove_intermediate_files"
-                    true
-                } catch (_EOFException) {
-                    log.debug "[rmEmptyFastAs]: ${fasta} has an EOFException, this is likely an empty gzipped file."
-                }
+                file(fasta).countFasta( limit: params.min_checkv_update )
             }
-        return fasta_counts
+            .sum()
+        return ch_fastas_counts
     }
-    // if stub run, return 0
+    // if stub run, return the minimum checkv update
     else {
-        return 0
+        return channel.value(params.min_checkv_update)
     }
 }
 

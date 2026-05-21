@@ -34,6 +34,13 @@ workflow TOOLKIT {
     def ch_multiqc_files = channel.empty()
 
     //
+    // SUBWORKFLOW: Download and preprocess reads
+    //
+    PREPROCESS(
+        params.deacon_index_name
+    )
+
+    //
     // SUBWORKFLOW: Classify viruses in input fasta files
     //
     if ( params.run_update || params.run_analyze ) {
@@ -42,15 +49,15 @@ workflow TOOLKIT {
             channel.fromPath(params.dtr_sequences_file).first()
         )
 
-        //
-        // SUBWORKFLOW: Classify viruses in input fasta files
-        //
-        HQFILTER(
-            CLASSIFY.out.virus_fna_gz,
-            CLASSIFY.out.complete_fna_gz,
-            CLASSIFY.out.class_tsv_gz,
-            CLASSIFY.out.checkv_db
-        )
+    //     //
+    //     // SUBWORKFLOW: Classify viruses in input fasta files
+    //     //
+    //     HQFILTER(
+    //         CLASSIFY.out.virus_fna_gz,
+    //         CLASSIFY.out.complete_fna_gz,
+    //         CLASSIFY.out.class_tsv_gz,
+    //         CLASSIFY.out.checkv_db
+    //     )
     }
 
     //

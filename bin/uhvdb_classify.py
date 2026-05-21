@@ -135,8 +135,6 @@ def main(args=None):
         dtr_seq_set = set(pl.read_csv(args.dtr_sequences, has_header=False, new_columns=['seq_name'])['seq_name'])
     else:
         dtr_seq_set = set()
-
-    print(dtr_seq_set)
     
     quality_summary = (
         pl.read_csv(

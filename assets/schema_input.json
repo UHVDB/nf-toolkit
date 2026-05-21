@@ -19,11 +19,11 @@
                 "meta": ["source_db"],
                 "errorMessage": "Source database must be uppercase letters only."
             },
-            "db_type": {
+            "source_type": {
                 "type": "string",
                 "pattern": "^(Assembly|Database)$",
-                "meta": ["db_type"],
-                "errorMessage": "Database type must be one of the following: Assembly or Database."
+                "meta": ["source_type"],
+                "errorMessage": "Source type must be one of the following: Assembly or Database."
             },
             "body_site": {
                 "type": "string",
@@ -71,12 +71,10 @@
             },
             "fna": {
                 "type": "string",
-                "format": "file-path",
-                "exists": true,
                 "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.f(ast|n)?a(s)?\\.gz$",
                 "errorMessage": "Fasta (FNA) files cannot contain spaces and must have extension '.fasta', '.fa', '.fna', or '.fas' all optionally gzipped."
             }
         },
-        "required": ["sample"]
+        "required": ["sample", "source_type"]
     }
 }
