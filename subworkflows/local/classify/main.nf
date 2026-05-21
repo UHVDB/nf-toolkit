@@ -4,6 +4,8 @@ include { GENOMAD_DOWNLOAD          } from '../../../modules/nf-core/genomad/dow
 include { VIRALVERIFY_DOWNLOAD      } from '../../../modules/local/viralverify/download/main'
 include { SEQKIT_SEQ_REPLACE_SPLIT2 } from '../../../modules/local/seqkit/seq_replace_split2/main'
 include { GENOMAD_ENDTOEND          } from '../../../modules/nf-core/genomad/endtoend/main'
+include { ARIA2C_SEQKIT_GENOMAD     } from '../../../modules/local/aria2c_seqkit_genomad/main'
+include { SEQKIT_GENOMAD            } from '../../../modules/local/seqkit_genomad/main'
 include { CHECKV_ENDTOEND           } from '../../../modules/nf-core/checkv/endtoend/main'
 include { SEQKIT_REPLACE as SEQKIT_REPLACE_PROVIRUS } from '../../../modules/nf-core/seqkit/replace/main'
 include { FIND_CONCATENATE as FIND_CONCATENATE_CHECKV } from '../../../modules/nf-core/find/concatenate/main'
@@ -76,32 +78,60 @@ workflow CLASSIFY {
     )
 
     // Identify remote fasta files and split them into chunks of size params.url_split_size
-    ch_assembly_fastas = fastas.assembly
+    ch_remote_assemblies = fastas.assembly
+        .filter { _meta, fasta -> file(fasta).toUri().toString().startsWith('https://') }
         .map { meta, fasta ->
-            def meta_new = [:]
-            meta_new.body_site = meta.body_site    
-            meta_new.source_type = meta.source_type
-            meta_new.source_db = meta.source_db
-            return [ meta_new, fasta ]
+            def source_db = meta.source_db ?: 'NA'
+            def body_site = meta.body_site ?: 'NA'
+            return [ [ body_site: body_site, source_db: source_db ], [ meta.id, fasta ] ]
         }
         .groupTuple() // Combine URLs by source_db, source_type, and body_site
-        .map { meta, fasta_list ->
-            fasta_list
+        .map { meta, id_fasta_list ->
+            id_fasta_list
                 .collate(params.url_split_size) // Split fasta files into chunks of size params.url_split_size
                 .withIndex() // Add index to each chunk
                 .collect { batch, idx ->
-                    def batch_meta = meta + [ id: "${meta.source_db}_batch_${idx}" ]
+                    def batch_meta = meta + [ id: "${meta.source_db}_${meta.body_site}_batch_${idx}" ]
                     [ batch_meta, batch ] // Create a new meta with the source_db and batch index
                 }
         }
         .flatMap { batches -> batches }   // one [meta, batch] per emission
-        .branch { _meta, fasta -> 
-            remote: file(fasta[0]).toUri().toString().startsWith('https://')
-            local: true
-        }
 
-    ch_assembly_fastas.remote.view()
-    ch_assembly_fastas.local.view()
+    //
+    // MODULE: Download, length filter, and run genomad end-to-end on remote fasta files
+    //
+    ARIA2C_SEQKIT_GENOMAD(
+        ch_remote_assemblies,
+        ch_genomad_db
+    )
+
+    // Identify local fasta files and split them into chunks of size params.url_split_size
+    ch_local_assemblies = fastas.assembly
+        .filter { _meta, fasta -> file(fasta).toUri().toString().startsWith('/') }
+        .map { meta, fasta ->
+            def source_db = meta.source_db ?: 'NA'
+            def body_site = meta.body_site ?: 'NA'
+            return [ [ body_site: body_site, source_db: source_db ], [ meta.id, fasta ] ]
+        }
+        .groupTuple() // Combine URLs by source_db, source_type, and body_site
+        .map { meta, id_fasta_list ->
+            id_fasta_list
+                .collate(params.url_split_size) // Split fasta files into chunks of size params.url_split_size
+                .withIndex() // Add index to each chunk
+                .collect { batch, idx ->
+                    def batch_meta = meta + [ id: "${meta.source_db}_${meta.body_site}_batch_${idx}" ]
+                    [ batch_meta, batch ] // Create a new meta with the source_db and batch index
+                }
+        }
+        .flatMap { batches -> batches }   // one [meta, batch] per emission
+
+    // //
+    // // MODULE: Length filter and run genomad end-to-end on local fasta files
+    // //
+    // ARIA2C_SEQKIT_GENOMAD(
+    //     ch_local_assemblies,
+    //     ch_genomad_db
+    // )
 
     
 

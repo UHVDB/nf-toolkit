@@ -1,7 +1,0 @@
-channels:
-- conda-forge
-- bioconda
-dependencies:
-- bioconda::deacon=0.13.2
-- bioconda::fastp=1.3.3
-- bioconda::spring=1.1.1

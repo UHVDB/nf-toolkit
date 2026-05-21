@@ -4,6 +4,8 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 include { MULTIQC                } from '../modules/nf-core/multiqc/main'
+include { PREPROCESS             } from '../subworkflows/local/preprocess'
+include { ASSEMBLE               } from '../subworkflows/local/assemble'
 include { CLASSIFY               } from '../subworkflows/local/classify'
 include { HQFILTER               } from '../subworkflows/local/hqfilter'
 include { paramsSummaryMap       } from 'plugin/nf-schema'
@@ -33,17 +35,34 @@ workflow TOOLKIT {
     def ch_versions = channel.empty()
     def ch_multiqc_files = channel.empty()
 
-    //
-    // SUBWORKFLOW: Download and preprocess reads
-    //
-    PREPROCESS(
-        params.deacon_index_name
-    )
+    if ( params.run_update || params.run_analyze ) {
+        //
+        // SUBWORKFLOW: Download and preprocess reads
+        //
+        PREPROCESS(
+            params.deacon_index_name,
+            reads,
+            sra
+        )
+        ch_spring = PREPROCESS.out.spring
+    }
+
+    if ( params.run_update || params.run_assembly ) {
+        //
+        // SUBWORKFLOW: Assemble reads into contigs
+        //
+        ASSEMBLE(
+            fastas,
+            PREPROCESS.out.spring
+        )
+        ch_spring = ch_spring.mix(ASSEMBLE.out.spring)
+        fastas    = fastas.mix(ASSEMBLE.out.assembly_fna_gz)
+    }
 
     //
     // SUBWORKFLOW: Classify viruses in input fasta files
     //
-    if ( params.run_update || params.run_analyze ) {
+    if ( params.run_update ) {
         CLASSIFY(
             fastas,
             channel.fromPath(params.dtr_sequences_file).first()

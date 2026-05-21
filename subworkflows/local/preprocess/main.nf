@@ -1,12 +1,12 @@
 include { DEACON_INDEXFETCH } from '../../../modules/local/deacon/indexfetch'
-// include { READ_DOWNLOAD     } from '../../../modules/local/read/download'
-// include { READ_PREPROCESS   } from '../../../modules/local/read/preprocess'
+include { XSRA_FASTP_DEACON_SPRING } from '../../../modules/local/xsra_fastp_deacon_spring'
+include { FASTP_DEACON_SPRING } from '../../../modules/local/fastp_deacon_spring'
 
 workflow PREPROCESS {
     take:
     deacon_index_name   // string, name of deacon index
-    input_fastqs        // channel: [ [ meta ], [ read1.fastq.gz, read1.fastq.gz? ] ]
-    input_sras          // channel: [ [ meta ], sra ]
+    fastqs              // channel: [ val(meta), [ read1.fastq.gz, read1.fastq.gz? ] ]
+    sras                // channel: [ val(meta), sra ]
 
     main:
     def ch_preprocessed_spring = channel.empty()
@@ -14,21 +14,26 @@ workflow PREPROCESS {
     //
     // MODULE: Download deacon index
     //
-    DEACON_INDEXFETCH(
-        deacon_index_name
-    )
+    if ( params.deacon_idx ) {
+        ch_deacon_idx = channel.fromPath("${params.deacon_idx}").first()
+    } else {
+        DEACON_INDEXFETCH(
+            deacon_index_name
+        )
+        ch_deacon_idx = DEACON_INDEXFETCH.out.idx.first()
+    }
 
     //
     // MODULE: Download, QC, and remove human reads, then compress with spring
     //
-    READ_DOWNLOAD(
-        input_sras,
-        DEACON_INDEXFETCH.out.index.collect()
+    XSRA_FASTP_DEACON_SPRING(
+        sras,
+        ch_deacon_idx
     )
-    ch_preprocessed_spring = READ_DOWNLOAD.out.spring
-        .combine(READ_DOWNLOAD.out.pe_count, by:0)
-        .map { meta, spring, pe_count ->
-            meta.single_end = (pe_count == 1)
+    ch_preprocessed_spring = XSRA_FASTP_DEACON_SPRING.out.spring
+        .combine(XSRA_FASTP_DEACON_SPRING.out.read_count, by:0)
+        .map { meta, spring, read_count ->
+            meta.single_end = (read_count == 1)
             return [ meta, spring ]
         }
         .mix(ch_preprocessed_spring)
@@ -36,13 +41,13 @@ workflow PREPROCESS {
     //
     // MODULE: QC reads, remove human reads, and compress with spring
     //
-    READ_PREPROCESS(
-        input_fastqs,
-        DEACON_INDEXFETCH.out.index.collect()
+    FASTP_DEACON_SPRING(
+        fastqs,
+        ch_deacon_idx
     )
     ch_preprocessed_spring = ch_preprocessed_spring
-        .mix(READ_PREPROCESS.out.spring)
+        .mix(FASTP_DEACON_SPRING.out.spring)
 
     emit:
-    preprocessed_spring = ch_preprocessed_spring
+    spring = ch_preprocessed_spring
 }

@@ -71,7 +71,7 @@
             },
             "fna": {
                 "type": "string",
-                "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.f(ast|n)?a(s)?\\.gz$",
+                "pattern": "^\\S+\\.(fasta|fas|fa|fna)(\\.gz)?$",
                 "errorMessage": "Fasta (FNA) files cannot contain spaces and must have extension '.fasta', '.fa', '.fna', or '.fas' all optionally gzipped."
             }
         },

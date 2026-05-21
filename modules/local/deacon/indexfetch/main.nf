@@ -10,7 +10,7 @@ process DEACON_INDEXFETCH {
     val index_name
 
     output:
-    path "*.index", emit: index
+    path "*.idx", emit: idx
     tuple val("${task.process}"), val('deacon'), eval('deacon --version | head -n1 | sed "s/deacon //g"'), emit: versions_deacon, topic: versions
 
     when:
@@ -26,6 +26,6 @@ process DEACON_INDEXFETCH {
 
     stub:
     """
-    touch ${index_name}.index
+    touch ${index_name}.idx
     """
 }
