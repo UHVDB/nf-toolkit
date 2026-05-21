@@ -1,5 +1,6 @@
-include { TRTRIMMER } from '../../../modules/local/trtrimmer/main'
-include { countFastAs } from '../../../subworkflows/local/functions/main'
+include { TRTRIMMER                             } from '../../../modules/local/trtrimmer/main'
+include { FASTA_VCLUST_PREFILTER_ALIGN_CLUSTER  } from '../../../subworkflows/nf-core/fasta_vclust_prefilter_align_cluster/main'
+include { countFastAs                           } from '../../../subworkflows/local/functions/main'
 
 workflow HQFILTER {
     take:
@@ -20,7 +21,14 @@ workflow HQFILTER {
     if ( countFastAs(TRTRIMMER.out.fna_gz) < params.min_checkv_update ) {
         ch_checkv_db = checkv_db
     } else {
-        VCLUST_
+        FASTA_VCLUST_PREFILTER_ALIGN_CLUSTER(
+            TRTRIMMER.out.fna_gz,
+            false,
+            'gani',
+            [],
+            0.95,
+            []
+        )
     }
 
 }

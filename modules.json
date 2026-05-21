@@ -148,22 +148,27 @@
                     "vclust/align": {
                         "branch": "master",
                         "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",
-                        "installed_by": ["modules"]
+                        "installed_by": ["fasta_vclust_prefilter_align_cluster", "modules"]
                     },
                     "vclust/cluster": {
                         "branch": "master",
                         "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",
-                        "installed_by": ["modules"]
+                        "installed_by": ["fasta_vclust_prefilter_align_cluster", "modules"]
                     },
                     "vclust/prefilter": {
                         "branch": "master",
                         "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",
-                        "installed_by": ["modules"]
+                        "installed_by": ["fasta_vclust_prefilter_align_cluster", "modules"]
                     }
                 }
             },
             "subworkflows": {
                 "nf-core": {
+                    "fasta_vclust_prefilter_align_cluster": {
+                        "branch": "master",
+                        "git_sha": "89ed2e7da9422fa11e2589eaa1847ab6228a27c5",
+                        "installed_by": ["subworkflows"]
+                    },
                     "utils_nextflow_pipeline": {
                         "branch": "master",
                         "git_sha": "05954dab2ff481bcb999f24455da29a5828af08d",
