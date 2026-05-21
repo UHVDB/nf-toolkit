@@ -8,25 +8,20 @@ include { SEQKIT_SPLIT2             } from '../../../modules/nf-core/seqkit/spli
 include { GENOMAD_ENDTOEND          } from '../../../modules/nf-core/genomad/endtoend/main'
 include { CHECKV_ENDTOEND           } from '../../../modules/nf-core/checkv/endtoend/main'
 include { SEQKIT_REPLACE as SEQKIT_REPLACE_PROVIRUS } from '../../../modules/nf-core/seqkit/replace/main'
-include { CAT_CAT as CAT_CAT_CHECKV } from '../../../modules/nf-core/cat/cat/main'
+include { FIND_CONCATENATE as FIND_CONCATENATE_CHECKV } from '../../../modules/nf-core/find/concatenate/main'
 include { CSVTK_FILTER2             } from '../../../modules/local/csvtk/filter2/main'
 include { SEQKIT_GREP               } from '../../../modules/nf-core/seqkit/grep/main'
-include { VIRALVERIFY_VIRALVERIFY   } from '../../../modules/local/viralverify/viralverify/main'
-include { UHVDB_CLASSIFY            } from '../../../modules/local/uhvdb/classify/main'
-include { CAT_CAT                   } from '../../../modules/nf-core/cat/cat/main'
+include { VIRALVERIFY_VIRALVERIFY       } from '../../../modules/local/viralverify/viralverify/main'
+include { UHVDB_CLASSIFY                } from '../../../modules/local/uhvdb/classify/main'
+include { FIND_CONCATENATE          } from '../../../modules/nf-core/find/concatenate/main'
 
 workflow CLASSIFY {
+
     take:
     fastas              // channel: [ val(meta), fna ]
     dtr_sequences_file  // string, DTR sequences file
 
     main:
-
-    // Create channels for combining all geNomad results
-    def ch_virus_summaries_tsv_gz   = channel.empty()
-    def ch_virus_fna_gz             = channel.empty()
-    def ch_genomad_genes_tsv_gz     = channel.empty()
-
     //
     // MODULE: Download genomad's database
     //
@@ -112,12 +107,19 @@ workflow CLASSIFY {
         rmEmptyFastAs(CHECKV_ENDTOEND.out.proviruses)
     )
 
+    // Create a channel to join CheckV viruses and proviruses when necessary
+    ch_checkv_viruses = CHECKV_ENDTOEND.out.viruses
+        .join(SEQKIT_REPLACE_PROVIRUS.out.fastx, remainder: true)
+        .branch { _meta, _viruses, proviruses ->
+            cat: proviruses != null
+            no_cat: true
+        }
+
     //
     // MODULE: Combine CheckV viruses and proviruses
     //
-    CAT_CAT_CHECKV(
-        CHECKV_ENDTOEND.out.viruses,
-        SEQKIT_REPLACE_PROVIRUS.out.fastx
+    FIND_CONCATENATE(
+        ch_checkv_viruses.cat
     )
 
     //
@@ -135,12 +137,16 @@ workflow CLASSIFY {
         .unique()
         .collectFile(name: 'mq_plus_viruses.txt', newLine: true)
 
+    // Remove proviruses item when it is null
+    ch_checkv_viruses_no_cat = ch_checkv_viruses.no_cat
+        .map { meta, viruses, _proviruses -> [ meta, viruses ] }
+
     //
     // MODULE: Filter CheckV output sequences
     //
     SEQKIT_GREP(
-        rmEmptyFastAs(CHECKV_ENDTOEND.out.viruses.mix(SEQKIT_REPLACE.out.fastx)),
-        ch_mq_plus_viruses
+        ch_checkv_viruses_no_cat.mix(FIND_CONCATENATE.out.file_out),
+        ch_mq_plus_viruses.first()
     )
 
     //
@@ -153,12 +159,10 @@ workflow CLASSIFY {
 
     // Combine geNomad, CheckV, and viralverify outputs
     ch_uhvdb_classify_input = SEQKIT_GREP.out.filter
-        .combine(SEQKIT_GREP.out.filter, by:0)
-        .combine(GENOMAD_ENDTOEND.out.virus_summary, by:0)
-        .combine(GENOMAD_ENDTOEND.out.virus_genes, by:0)
-        .combine(CHECKV_ENDTOEND.out.quality_summary, by:0)
-        .combine(rmEmptyTsvs(VIRALVERIFY_VIRALVERIFY.out.result_table), by:0)
-        .view()
+        .join(GENOMAD_ENDTOEND.out.virus_summary)
+        .join(GENOMAD_ENDTOEND.out.virus_genes)
+        .join(CHECKV_ENDTOEND.out.quality_summary)
+        .join(rmEmptyTsvs(VIRALVERIFY_VIRALVERIFY.out.csv_gz))
 
     //
     // MODULE: Classify viruses by combining results from geNomad, CheckV, and ViralVerify
@@ -168,16 +172,9 @@ workflow CLASSIFY {
         dtr_sequences_file
     )
 
-    // //
-    // // MODULE: Combine filtered virus fastas
-    // //
-    // CAT_CAT(
-
-    // )
-
-
     emit:
-    virus_summaries_tsv_gz   = ch_virus_summaries_tsv_gz
-    virus_fna_gz             = ch_virus_fna_gz
-    genomad_genes_tsv_gz     = ch_genomad_genes_tsv_gz
+    checkv_db       = ch_checkv_db
+    virus_fna_gz    = UHVDB_CLASSIFY.out.fna_gz
+    complete_fna_gz = UHVDB_CLASSIFY.out.complete_fna_gz
+    class_tsv_gz    = UHVDB_CLASSIFY.out.tsv_gz
 }

@@ -5,6 +5,7 @@
 */
 include { MULTIQC                } from '../modules/nf-core/multiqc/main'
 include { CLASSIFY               } from '../subworkflows/local/classify'
+include { HQFILTER               } from '../subworkflows/local/hqfilter'
 include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
@@ -38,17 +39,18 @@ workflow TOOLKIT {
     if ( params.run_update || params.run_analyze ) {
         CLASSIFY(
             fastas,
-            params.dtr_sequences_file
+            channel.fromPath(params.dtr_sequences_file).first()
         )
 
-    // //
-    // // SUBWORKFLOW: Classify viruses in input fasta files
-    // //
-    // HQFILTER(
-    //     CLASSIFY.out.fasta,
-    //     CLASSIFY.out.tsv,
-    //     CLASSIFY.out.checkv_db
-    // )
+        //
+        // SUBWORKFLOW: Classify viruses in input fasta files
+        //
+        HQFILTER(
+            CLASSIFY.out.virus_fna_gz,
+            CLASSIFY.out.complete_fna_gz,
+            CLASSIFY.out.class_tsv_gz,
+            CLASSIFY.out.checkv_db
+        )
     }
 
     //

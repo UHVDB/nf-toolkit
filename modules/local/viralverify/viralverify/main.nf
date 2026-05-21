@@ -12,12 +12,14 @@ process VIRALVERIFY_VIRALVERIFY {
     path db
 
     output:
-    tuple val(meta), path ("${meta.id}_result_table.csv.gz")  , emit: result_table
-    tuple val(meta), path ("${meta.id}_domtblout.gz")         , emit: domtblout
+    tuple val(meta), path ("*_result_table.csv.gz")  , emit: csv_gz
+    tuple val(meta), path ("*_domtblout.gz")         , emit: domtblout_gz
     tuple val("${task.process}"), val('viralverify'), val('1.1'), emit: versions_viralverify, topic: versions
     // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
 
     script:
+    def args = task.ext.args ?: ''
+    def prefix = task.ext.prefix ?: "${meta.id}"
     def is_compressed  = fasta.getExtension() == "gz" ? true : false
     def fasta_name     = is_compressed ? fasta.getBaseName().replace(".gz", "") : fasta
     """
@@ -30,22 +32,24 @@ process VIRALVERIFY_VIRALVERIFY {
     viralverify \\
         -f ${fasta_name} \\
         --hmm ${db} \\
-        -o ${meta.id}_viralverify \\
-        -t ${task.cpus}
+        -o ${prefix}_viralverify \\
+        -t ${task.cpus} \\
+        ${args}
 
     ### Compress
-    gzip -c ${meta.id}_viralverify/${file(fasta_name).getBaseName()}_result_table.csv > ${meta.id}_result_table.csv.gz
-    gzip -c ${meta.id}_viralverify/${file(fasta_name).getBaseName()}_domtblout > ${meta.id}_domtblout.gz
+    gzip -c ${prefix}_viralverify/${file(fasta_name).getBaseName()}_result_table.csv > ${prefix}_result_table.csv.gz
+    gzip -c ${prefix}_viralverify/${file(fasta_name).getBaseName()}_domtblout > ${prefix}_domtblout.gz
 
     ### Cleanup
-    rm -rf ${meta.id}_viralverify
+    rm -rf ${prefix}_viralverify
     rm -f ${fasta_name}
     """
 
     stub:
+    def prefix = task.ext.prefix ?: "${meta.id}"
     """
     ### Touch empty output file
-    echo "" | gzip > ${meta.id}_result_table.csv.gz
-    echo "" | gzip > ${meta.id}_domtblout.gz
+    echo "" | gzip > ${prefix}_result_table.csv.gz
+    echo "" | gzip > ${prefix}_domtblout.gz
     """
 }

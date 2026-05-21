@@ -54,6 +54,11 @@ def parse_args(args=None):
         help="Output FASTA file containing sequences classified uncertain or confident.",
     )
     parser.add_argument(
+        "-oc",
+        "--output_complete_fasta",
+        help="Output FASTA file containing sequences classified as complete.",
+    )
+    parser.add_argument(
         "-s",
         "--source_db",
         help="Name of source database.",
@@ -315,19 +320,37 @@ def main(args=None):
             .filter(pl.col('uhvdb_virus_classification').is_in(['uncertain', 'confident']))
             ['seq_name']
     )
+    complete_seqs = set(
+        joined_w_scores
+            .filter(pl.col('uhvdb_virus_classification').is_in(['uncertain', 'confident']))
+            .filter(pl.col('completeness') >= 80)
+            .filter(pl.col('completeness_method').str.contains('DTR'))
+            ['seq_name']
+    )
+
+
     # write output FASTA file
     viral_seqs = []
+    complete_seqs = []
     already_added = set()
 
-    with gzip.open(args.fasta, 'rt') as fasta_gunzipped:
+    if args.fasta.endswith('.gz'):
+        read_function = gzip.open
+    else:
+        read_function = open
+    with read_function(args.fasta, 'rt') as fasta_gunzipped:
         for record in SeqIO.parse(fasta_gunzipped, "fasta"):
-            if record.id in uncertain_confident and record.id not in already_added:
+            if record.id in already_added:
+                continue
+            if record.id in complete_seqs:
+                complete_seqs.append(record)
+                already_added.add(record.id)
+            elif record.id in uncertain_confident:
                 viral_seqs.append(record)
                 already_added.add(record.id)
-            else:
-                continue
 
     SeqIO.write(viral_seqs, args.output_fasta, "fasta")
+    SeqIO.write(complete_seqs, args.output_complete_fasta, "fasta")
 
 if __name__ == "__main__":
     sys.exit(main())
